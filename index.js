@@ -4,10 +4,24 @@ import linebot from 'linebot'
 import dotenv from 'dotenv'
 // 引用 axios
 import axios from 'axios'
+// 引用 node-schedule
+import schedule from 'node-schedule'
 
 // 讀取 .env 檔案
 dotenv.config()
 
+// 設定 node-scheule 甚麼時候要資料
+let exhubitions = []
+const updateData = async () => {
+  const response = await axios.get('https://cloud.culture.tw/frontsite/trans/SearchShowAction.do?method=doFindTypeJ&category=6')
+  exhubitions = response.data
+}
+// 每天 0 點去要資料
+schedule.scheduleJob('* * 0 * * *', () => {
+  updateData()
+})
+
+updateData()
 // 設定機器人的資訊
 const bot = linebot({
   channelId: process.env.CHANNEL_ID,
@@ -19,12 +33,11 @@ const bot = linebot({
 // linebot 有許多事件可以觸發，詳情請見 https://www.npmjs.com/package/linebot
 bot.on('message', async event => {
   try {
-    const response = await axios.get('https://cloud.culture.tw/frontsite/trans/SearchShowAction.do?method=doFindTypeJ&category=6')
+    let reply = ''
     // 機器人接收搜尋訊息
     const searchText = event.message.text
-    let reply = ''
     // 迭代資料
-    response.data.forEach(element => {
+    exhubitions.forEach(element => {
       if (element.title === searchText) {
         reply = element.showInfo[0].locationName
       }
